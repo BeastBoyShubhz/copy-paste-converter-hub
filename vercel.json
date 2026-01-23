@@ -1,0 +1,15 @@
+{
+    "redirects": [
+        {
+            "source": "/(.*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "copy-paste-converter.vercel.app"
+                }
+            ],
+            "destination": "https://converterhub.dev/$1",
+            "permanent": true
+        }
+    ]
+}
