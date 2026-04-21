@@ -47,12 +47,23 @@ export async function generateMetadata({ params }: { params: Promise<{ tool: str
     const tool = getToolBySlug(slug);
     if (!tool) return {};
 
+    const url = `https://converterhub.dev/tools/${tool.slug}`;
     return {
-        title: `${tool.title} | Copy-Paste Converter Hub`,
+        title: tool.title,
         description: tool.description,
         keywords: tool.keywords,
-        alternates: {
-            canonical: `/tools/${tool.slug}`,
+        alternates: { canonical: `/tools/${tool.slug}` },
+        openGraph: {
+            type: 'website',
+            title: tool.title,
+            description: tool.description,
+            url,
+            siteName: 'Copy-Paste Converter Hub',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: tool.title,
+            description: tool.description,
         },
     };
 }
@@ -71,9 +82,42 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
         </div>
     ));
 
+    const faqJsonLd = tool.faqs.length > 0 ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: tool.faqs.map((faq) => ({
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+        })),
+    } : null;
+
+    const softwareJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: tool.title,
+        description: tool.description,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Any (runs in browser)',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        url: `https://converterhub.dev/tools/${tool.slug}`,
+    };
+
     return (
-        <ToolLayout tool={tool}>
-            <Component />
-        </ToolLayout>
+        <>
+            {faqJsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+                />
+            )}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+            />
+            <ToolLayout tool={tool}>
+                <Component />
+            </ToolLayout>
+        </>
     );
 }
