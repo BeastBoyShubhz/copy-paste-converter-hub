@@ -1,46 +1,61 @@
 export const metadata = {
-    title: 'Privacy Policy | Copy-Paste Converter Hub',
+  title: 'Privacy Policy',
+  description: 'What we collect (nothing) and how we handle your data.',
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPage() {
-    return (
-        <main className="container" style={{ maxWidth: '800px', padding: 'var(--spacing-xl) var(--spacing-md)' }}>
-            <h1 style={{ fontSize: '2.5rem', marginBottom: 'var(--spacing-lg)' }}>Privacy Policy</h1>
+  return (
+    <article>
+      <header className="container pt-14 md:pt-20 pb-10">
+        <div className="rise rise-1 max-w-4xl">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="meta-label meta-label--accent">Policy</span>
+            <span className="h-px w-10 bg-accent" />
+            <span className="meta-label">
+              Last revised {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+            </span>
+          </div>
+          <h1 className="font-display text-5xl md:text-7xl leading-[0.95] tracking-tight-display text-ink">
+            On <span className="font-italic-serif">privacy</span>.
+          </h1>
+        </div>
+        <div className="rule mt-12" />
+      </header>
 
-            <section style={{ lineHeight: 1.7, color: 'var(--text-secondary)' }}>
-                <p style={{ marginBottom: 'var(--spacing-md)' }}>
-                    Last updated: {new Date().toLocaleDateString()}
-                </p>
+      <section className="container pb-16">
+        <div className="grid md:grid-cols-12 gap-10">
+          <aside className="md:col-span-3 order-2 md:order-1">
+            <div className="sticky top-32 meta-label meta-label--ink">
+              TL;DR
+              <p className="mt-2 font-display italic text-ink text-lg leading-snug normal-case tracking-normal">
+                Your inputs never leave the browser. We do not know what you pasted. We do not want to.
+              </p>
+            </div>
+          </aside>
+          <div className="md:col-span-9 order-1 md:order-2 blog-content max-w-none">
+            <h2>No input data collection</h2>
+            <p>
+              Every conversion — JSON formatting, timestamp parsing, JWT decoding, Base64 encoding, everything — runs entirely in your browser using JavaScript that ships with the page. Your input is never transmitted to our servers, because there is nothing on our side to receive it.
+            </p>
 
-                <h2 style={{ color: 'var(--text-primary)', marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-sm)' }}>1. No Data Collection</h2>
-                <p>
-                    At Copy-Paste Converter Hub, we take "privacy-first" literally.
-                    **We do not collect, store, or transmit your input data.**
-                </p>
-                <p>
-                    All conversions (JSON formatting, timestamp parsing, etc.) happen client-side in your browser using JavaScript. No input data is ever sent to our servers.
-                </p>
+            <h2>Local storage</h2>
+            <p>
+              Some tools remember non-sensitive preferences on your device (theme, recently used tool, UI state). These stay in your browser&apos;s <code>localStorage</code> and are never sent anywhere. Clearing your site data removes them.
+            </p>
 
-                <h2 style={{ color: 'var(--text-primary)', marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-sm)' }}>2. Cookies</h2>
-                <p>
-                    We use local storage (on your device) to remember your preferences, such as:
-                    <ul style={{ paddingLeft: '20px', margin: '10px 0' }}>
-                        <li>Dark/Light mode theme</li>
-                        <li>Recently used tools</li>
-                    </ul>
-                    These are never transmitted to us. We do not use tracking cookies.
-                </p>
+            <h2>Analytics</h2>
+            <p>
+              We use Google Analytics to count page views and understand which tools are useful enough to keep building. Analytics sees the URL you visited and the usual technical metadata a browser exposes. It never sees the content of your inputs or outputs. If you want to opt out, a content blocker will take care of it.
+            </p>
 
-                <h2 style={{ color: 'var(--text-primary)', marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-sm)' }}>3. Analytics</h2>
-                <p>
-                    We may use a basic, privacy-preserving counter to see which pages are visited most often (e.g. "JSON Formatter received 100 views"). This data is aggregate and anonymous. It does not track your IP address or personal identity.
-                </p>
-
-                <h2 style={{ color: 'var(--text-primary)', marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-sm)' }}>Contact</h2>
-                <p>
-                    If you have questions, please open an issue on our GitHub repository.
-                </p>
-            </section>
-        </main>
-    );
+            <h2>Contact</h2>
+            <p>
+              If you have questions, open an issue on GitHub — that is the fastest way to get a response.
+            </p>
+          </div>
+        </div>
+      </section>
+    </article>
+  );
 }
