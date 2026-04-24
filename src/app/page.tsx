@@ -1,8 +1,7 @@
-'use client';
-
-import { tools, ToolMetadata } from '@/lib/tools/registry';
-import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { tools, ToolMetadata } from '@/lib/tools/registry';
+import { getAllPosts } from '@/lib/blog';
+import { HeroTool } from '@/components/home/HeroTool';
 
 const categoryLabels: Record<string, string> = {
   converters: 'Converters',
@@ -13,48 +12,29 @@ const categoryLabels: Record<string, string> = {
 };
 
 const categoryOrder = [
-  'converters',
   'formatters',
   'encoders',
+  'converters',
   'dev-utils',
   'text',
 ];
 
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export default function Home() {
-  const [query, setQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const posts = getAllPosts().slice(0, 3);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const filteredTools = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return tools;
-    return tools.filter(
-      (tool) =>
-        tool.title.toLowerCase().includes(q) ||
-        tool.description.toLowerCase().includes(q) ||
-        tool.keywords.some((k) => k.toLowerCase().includes(q)) ||
-        tool.category.toLowerCase().includes(q),
-    );
-  }, [query]);
-
-  const toolsByCategory = useMemo(() => {
-    const grouped: Record<string, ToolMetadata[]> = {};
-    for (const tool of filteredTools) {
-      if (!grouped[tool.category]) grouped[tool.category] = [];
-      grouped[tool.category].push(tool);
-    }
-    return grouped;
-  }, [filteredTools]);
+  const toolsByCategory: Record<string, ToolMetadata[]> = {};
+  for (const tool of tools) {
+    if (!toolsByCategory[tool.category]) toolsByCategory[tool.category] = [];
+    toolsByCategory[tool.category].push(tool);
+  }
 
   const itemListJsonLd = {
     '@context': 'https://schema.org',
@@ -76,7 +56,7 @@ export default function Home() {
         name: 'Are these developer tools really free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. Every tool on ConverterHub is free to use with no sign-up, no paywall, and no usage limits. The site is supported only by its static hosting.',
+          text: 'Yes. Every tool on ConverterHub is free with no sign-up, no paywall, and no usage limits.',
         },
       },
       {
@@ -84,15 +64,15 @@ export default function Home() {
         name: 'Is my data sent to a server?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'No. All conversions — JSON formatting, JWT decoding, Base64, timestamps, UUID, etc. — run entirely in your browser using JavaScript. Nothing you paste is transmitted to our servers.',
+          text: 'No. All conversions run entirely in your browser. Nothing you paste is transmitted to our servers.',
         },
       },
       {
         '@type': 'Question',
-        name: 'Do these tools work offline?',
+        name: 'Do the tools work offline?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Once a tool page has loaded, it typically continues to work without a network connection because all processing happens in the browser.',
+          text: 'Once a tool page has loaded it typically keeps working without a network connection, because all processing happens in the browser.',
         },
       },
       {
@@ -100,15 +80,7 @@ export default function Home() {
         name: 'Which tool should I use to decode a JWT?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Use the JWT Decoder. It splits the token into header, payload, and signature, decodes the Base64URL, and shows expiry in a human-readable format. It never asks for your secret.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Can I use these tools in commercial projects?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Yes. Use the results in any project, commercial or otherwise. The tools themselves are free to access on this site.',
+          text: 'Use the JWT Decoder. It splits the token into header, payload and signature and shows expiry in a human-readable format. It never asks for your secret.',
         },
       },
     ],
@@ -125,173 +97,119 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      {/* ——— Hero + Search ——— */}
+      {/* ——— Hero with embedded tool ——— */}
       <section className="border-b border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
-        <div className="container py-10 md:py-14">
-          <div className="max-w-3xl">
-            <h1 className="text-3xl md:text-5xl font-bold text-[color:var(--text)] leading-tight tracking-tight">
+        <div className="container py-8 md:py-10">
+          <div className="max-w-3xl mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--text)] leading-tight tracking-tight">
               Free Online Developer Tools
             </h1>
-            <p className="mt-4 text-base md:text-lg text-[color:var(--text-soft)] leading-relaxed max-w-2xl">
-              Fast, no-nonsense tools for JSON, JWT, Base64, timestamps, UUIDs, URLs and more. Everything runs in your browser — no sign-up, no tracking, no server calls.
+            <p className="mt-3 text-base md:text-lg text-[color:var(--text-soft)] leading-relaxed">
+              Format JSON, decode JWTs, encode Base64, convert timestamps and more — right here, right now. Everything runs in your browser. No sign-up, no tracking.
             </p>
-            <div className="mt-6">
-              <label htmlFor="tool-search" className="sr-only">
-                Search tools
-              </label>
-              <div className="relative max-w-xl">
-                <input
-                  ref={searchInputRef}
-                  id="tool-search"
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search tools — e.g. json, jwt, base64, uuid…"
-                  className="input-glass w-full py-3 pl-4 pr-14 rounded-lg text-[0.95rem]"
-                  aria-label="Search tools"
-                />
-                <kbd className="kbd absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex">
-                  ⌘K
-                </kbd>
+          </div>
+          <HeroTool />
+        </div>
+      </section>
+
+      {/* ——— All tools ——— */}
+      <section className="container py-10 md:py-14" id="tools">
+        <div className="flex items-baseline justify-between mb-6">
+          <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)]">
+            All tools
+          </h2>
+          <span className="text-sm text-[color:var(--text-muted)]">
+            {tools.length} tools · 100% free
+          </span>
+        </div>
+
+        {categoryOrder
+          .filter((cat) => toolsByCategory[cat]?.length)
+          .map((cat) => (
+            <div key={cat} className="mb-8 last:mb-0">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)] mb-3">
+                {categoryLabels[cat] ?? cat}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {toolsByCategory[cat].map((tool) => (
+                  <Link
+                    key={tool.slug}
+                    href={`/tools/${tool.slug}`}
+                    className="tool-card group"
+                  >
+                    <div className="tool-card__title group-hover:text-[color:var(--accent)] transition-colors">
+                      {tool.title}
+                    </div>
+                    <div className="tool-card__desc">{tool.description}</div>
+                  </Link>
+                ))}
               </div>
-              <p className="mt-2 text-xs text-[color:var(--text-muted)]">
-                {filteredTools.length} of {tools.length} tool{tools.length === 1 ? '' : 's'}
-                {query && ` matching "${query}"`}
-              </p>
+            </div>
+          ))}
+      </section>
+
+      {/* ——— Blog section ——— */}
+      {posts.length > 0 && (
+        <section className="border-t border-[color:var(--border)] bg-[color:var(--bg-subtle)]" id="blog">
+          <div className="container py-10 md:py-14">
+            <div className="flex items-baseline justify-between mb-6">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)]">
+                  From the blog
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--text-muted)]">
+                  Practical notes on the tools developers actually use.
+                </p>
+              </div>
+              <Link
+                href="/blog"
+                className="text-sm text-[color:var(--accent)] hover:underline whitespace-nowrap"
+              >
+                All posts →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {posts.map((post) => (
+                <Link
+                  key={post.slug}
+                  href={`/blog/${post.slug}`}
+                  className="tool-card group"
+                >
+                  <div className="text-xs text-[color:var(--text-muted)] mb-2">
+                    {formatDate(post.date)} · {post.readingMinutes} min read
+                  </div>
+                  <div className="tool-card__title group-hover:text-[color:var(--accent)] transition-colors">
+                    {post.title}
+                  </div>
+                  <div className="tool-card__desc">{post.description}</div>
+                </Link>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ——— Tool grid ——— */}
-      <section className="container py-10 md:py-14">
-        {filteredTools.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-[color:var(--text-muted)]">
-              No tools match &ldquo;{query}&rdquo;. Try &ldquo;json&rdquo;, &ldquo;jwt&rdquo;, or &ldquo;base64&rdquo;.
-            </p>
-          </div>
-        ) : (
-          categoryOrder
-            .filter((cat) => toolsByCategory[cat]?.length)
-            .map((cat) => (
-              <div key={cat} className="mb-10 last:mb-0">
-                <div className="flex items-baseline justify-between mb-4">
-                  <h2 className="text-lg md:text-xl font-semibold text-[color:var(--text)]">
-                    {categoryLabels[cat] ?? cat}
-                  </h2>
-                  <span className="text-xs text-[color:var(--text-muted)]">
-                    {toolsByCategory[cat].length} tool{toolsByCategory[cat].length === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {toolsByCategory[cat].map((tool) => (
-                    <ToolCard key={tool.slug} tool={tool} />
-                  ))}
-                </div>
-              </div>
-            ))
-        )}
-      </section>
-
-      {/* ——— SEO content: why use + categorized explanations ——— */}
-      <section className="border-t border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
-        <div className="container py-12 md:py-16">
-          <div className="max-w-3xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--text)] mb-4">
-              Why use ConverterHub?
-            </h2>
-            <div className="prose">
-              <p>
-                ConverterHub is a collection of small, focused developer utilities that do one job well. Unlike many online converters, there are no ads, no trackers on the content you paste, no sign-up walls, and no server round-trips. Paste, convert, copy, close the tab.
-              </p>
-              <ul>
-                <li><strong>100% client-side.</strong> Every conversion runs in your browser. Your JWTs, API responses, and tokens never leave your machine.</li>
-                <li><strong>Free, forever.</strong> No pricing page, no &ldquo;pro&rdquo; tier, no rate limits.</li>
-                <li><strong>Fast.</strong> Static pages, minimal JavaScript, no network hops. Usable on a weak connection.</li>
-                <li><strong>Standards-compliant.</strong> We follow RFC 3339 for timestamps, RFC 7519 for JWTs, RFC 4648 for Base64, and WHATWG for URL encoding.</li>
-                <li><strong>Keyboard-friendly.</strong> Press <kbd className="kbd">⌘K</kbd> anywhere on the homepage to jump to search.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ——— Category explanations (keyword-rich) ——— */}
-      <section className="container py-12 md:py-16">
-        <div className="grid md:grid-cols-2 gap-10">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)] mb-3">
-              JSON tools
-            </h2>
-            <p className="text-[color:var(--text-soft)] leading-relaxed">
-              Validate, format, and transform JSON without pasting it into a sketchy online editor. Our <Link href="/tools/json-formatter" className="text-[color:var(--accent)] hover:underline">JSON formatter and validator</Link> highlights syntax errors with line numbers, and the <Link href="/tools/json-to-csv" className="text-[color:var(--accent)] hover:underline">JSON to CSV converter</Link> turns nested arrays into spreadsheet-ready output.
-            </p>
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)] mb-3">
-              Encoding &amp; decoding
-            </h2>
-            <p className="text-[color:var(--text-soft)] leading-relaxed">
-              Convert between raw text and wire formats: <Link href="/tools/base64-encode-decode" className="text-[color:var(--accent)] hover:underline">Base64 encoder/decoder</Link> with UTF-8 handling, <Link href="/tools/url-encode-decode" className="text-[color:var(--accent)] hover:underline">URL percent-encoding</Link>, and <Link href="/tools/html-escape-unescape" className="text-[color:var(--accent)] hover:underline">HTML entity escape/unescape</Link> for safely embedding data.
-            </p>
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)] mb-3">
-              Timestamps &amp; IDs
-            </h2>
-            <p className="text-[color:var(--text-soft)] leading-relaxed">
-              The <Link href="/tools/timestamp-converter" className="text-[color:var(--accent)] hover:underline">Unix timestamp converter</Link> auto-detects seconds vs milliseconds and shows local and UTC output. The <Link href="/tools/uuid-generator" className="text-[color:var(--accent)] hover:underline">UUID generator</Link> emits RFC 4122 v4 UUIDs using the browser&rsquo;s crypto API.
-            </p>
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)] mb-3">
-              Debug &amp; inspect
-            </h2>
-            <p className="text-[color:var(--text-soft)] leading-relaxed">
-              The <Link href="/tools/jwt-decoder" className="text-[color:var(--accent)] hover:underline">JWT decoder</Link> splits a token into header and payload, shows the algorithm, and flags expiry. Secrets never leave your browser because we never ask for them. The <Link href="/tools/word-counter" className="text-[color:var(--accent)] hover:underline">word counter</Link> counts words, characters, and reading time.
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ——— FAQ ——— */}
-      <section className="border-t border-[color:var(--border)]">
-        <div className="container py-12 md:py-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--text)] mb-6">
-            Frequently asked questions
-          </h2>
-          <div className="max-w-3xl divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
-            {faqJsonLd.mainEntity.map((faq, i) => (
-              <details key={i} className="group py-4">
-                <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-[color:var(--text)]">
-                  <span>{faq.name}</span>
-                  <span className="text-[color:var(--text-muted)] group-open:rotate-45 transition-transform text-xl leading-none">
-                    +
-                  </span>
-                </summary>
-                <p className="mt-2 text-[color:var(--text-soft)] leading-relaxed">
-                  {faq.acceptedAnswer.text}
-                </p>
-              </details>
-            ))}
-          </div>
+      <section className="container py-10 md:py-14">
+        <h2 className="text-xl md:text-2xl font-bold text-[color:var(--text)] mb-6">
+          Frequently asked questions
+        </h2>
+        <div className="max-w-3xl divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
+          {faqJsonLd.mainEntity.map((faq, i) => (
+            <details key={i} className="group py-4">
+              <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-[color:var(--text)]">
+                <span>{faq.name}</span>
+                <span className="text-[color:var(--text-muted)] group-open:rotate-45 transition-transform text-xl leading-none ml-4">
+                  +
+                </span>
+              </summary>
+              <p className="mt-2 text-[color:var(--text-soft)] leading-relaxed">
+                {faq.acceptedAnswer.text}
+              </p>
+            </details>
+          ))}
         </div>
       </section>
     </>
-  );
-}
-
-function ToolCard({ tool }: { tool: ToolMetadata }) {
-  return (
-    <Link href={`/tools/${tool.slug}`} className="tool-card group">
-      <div className="tool-card__title group-hover:text-[color:var(--accent)] transition-colors">
-        {tool.title}
-      </div>
-      <div className="tool-card__desc">{tool.description}</div>
-      <div className="tool-card__cat">
-        {categoryLabels[tool.category] ?? tool.category}
-      </div>
-    </Link>
   );
 }
