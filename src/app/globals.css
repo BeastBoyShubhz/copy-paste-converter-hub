@@ -357,6 +357,21 @@ h1, h2, h3, h4 {
   margin: 2rem 0;
 }
 .blog-content strong { color: var(--text); font-weight: 650; }
+.blog-content h2,
+.blog-content h3 { position: relative; scroll-margin-top: 5rem; }
+.blog-content .heading-anchor {
+  position: absolute;
+  left: -1.25rem;
+  top: 0;
+  color: var(--text-faint);
+  text-decoration: none;
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.blog-content h2:hover .heading-anchor,
+.blog-content h3:hover .heading-anchor { opacity: 1; }
+.blog-content .heading-anchor:hover { color: var(--accent); }
 
 /* ——— Misc utilities ——— */
 .kbd {

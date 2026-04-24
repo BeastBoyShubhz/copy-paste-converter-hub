@@ -97,15 +97,15 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      {/* ——— Hero with embedded tool ——— */}
+      {/* ——— Hero: tool first, headline above it ——— */}
       <section className="border-b border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
-        <div className="container py-8 md:py-10">
-          <div className="max-w-3xl mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--text)] leading-tight tracking-tight">
-              Free Online Developer Tools
+        <div className="container py-6 md:py-8">
+          <div className="max-w-3xl mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-[color:var(--text)] leading-tight tracking-tight">
+              Free Online Developer Tools — in Your Browser
             </h1>
-            <p className="mt-3 text-base md:text-lg text-[color:var(--text-soft)] leading-relaxed">
-              Format JSON, decode JWTs, encode Base64, convert timestamps and more — right here, right now. Everything runs in your browser. No sign-up, no tracking.
+            <p className="mt-2 text-sm md:text-base text-[color:var(--text-soft)] leading-relaxed">
+              Format JSON, decode JWTs, encode Base64, convert Unix timestamps — paste and convert right here. No sign-up, no tracking, no server calls.
             </p>
           </div>
           <HeroTool />

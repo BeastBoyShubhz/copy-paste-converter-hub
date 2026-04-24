@@ -86,6 +86,12 @@ export default function RootLayout({
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#FFFFFF" />
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="ConverterHub Blog"
+          href="/blog/rss.xml"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

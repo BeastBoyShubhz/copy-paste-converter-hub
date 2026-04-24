@@ -2,9 +2,13 @@
 /**
  * Daily blog generator — calls Gemini (free tier) and writes a markdown post.
  *
+ * Produces long-form (1500-2200 word), keyword-targeted, internally-linked
+ * posts with TOC-friendly H2/H3 structure, a required FAQ section (picked up
+ * by our FAQPage JSON-LD renderer), and a short TL;DR.
+ *
  * Env:
- *   GEMINI_API_KEY — required. Get a free key at https://aistudio.google.com/apikey
- *   GEMINI_MODEL   — optional, defaults to "gemini-2.0-flash" (free tier friendly).
+ *   GEMINI_API_KEY — required. Free key at https://aistudio.google.com/apikey
+ *   GEMINI_MODEL   — optional, defaults to "gemini-2.0-flash".
  *
  * Usage:
  *   node scripts/generate-blog.mjs
@@ -17,103 +21,217 @@ const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
 
 if (!API_KEY) {
-  console.error('GEMINI_API_KEY is not set. Get a free key: https://aistudio.google.com/apikey');
+  console.error(
+    'GEMINI_API_KEY is not set. Get a free key: https://aistudio.google.com/apikey',
+  );
   process.exit(1);
 }
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 fs.mkdirSync(BLOG_DIR, { recursive: true });
 
+/**
+ * Topic pool. Each entry drives one post. `primaryKeyword` is the head term
+ * we want the post to rank for. `relatedLinks` are tool pages to weave in
+ * as contextual internal links. `sourceRefs` are authoritative external URLs
+ * the model may cite (RFC, MDN, etc.).
+ */
 const TOPIC_POOL = [
   {
-    topic: 'Regex patterns every backend engineer ends up writing',
-    angle: 'email, UUID, slug, phone, URL — what the canonical patterns are, where they fail, and when to reach for a proper parser instead.',
-    linkTool: '/tools/json-formatter',
-    tags: ['regex', 'backend', 'validation'],
+    topic: 'How to format JSON in 2026: a developer’s practical guide',
+    primaryKeyword: 'JSON formatter',
+    angle:
+      'why developers format JSON (readability, diffs, review), the common indent conventions, how to validate as you format, and when to keep it minified instead.',
+    primaryTool: '/tools/json-formatter',
+    relatedLinks: ['/tools/json-minifier', '/tools/json-to-csv'],
+    sourceRefs: [
+      'https://www.rfc-editor.org/rfc/rfc8259',
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify',
+    ],
+    tags: ['json', 'formatting', 'tooling'],
   },
   {
-    topic: 'Base64 is not encryption, and other things people get wrong about encoding',
-    angle: 'encoding vs. encryption vs. hashing, why Base64 shows up everywhere, URL-safe variants, padding edge cases.',
-    linkTool: '/tools/base64-encode-decode',
-    tags: ['base64', 'encoding', 'security'],
+    topic: 'How to decode a JWT: the safe way in 2026',
+    primaryKeyword: 'JWT decoder',
+    angle:
+      'what a JWT actually is (header.payload.signature), the Base64URL alphabet, why you never paste tokens into random websites, how to verify signatures, and the real attack surface.',
+    primaryTool: '/tools/jwt-decoder',
+    relatedLinks: ['/tools/base64-encode-decode'],
+    sourceRefs: [
+      'https://www.rfc-editor.org/rfc/rfc7519',
+      'https://datatracker.ietf.org/doc/html/rfc7515',
+    ],
+    tags: ['jwt', 'security', 'auth'],
   },
   {
-    topic: 'URL encoding gotchas that break your API requests',
-    angle: 'encodeURI vs encodeURIComponent, percent-encoded +, reserved characters, double-encoding nightmares.',
-    linkTool: '/tools/url-encode-decode',
-    tags: ['urls', 'http', 'api'],
+    topic: 'Base64 encoding explained for web developers',
+    primaryKeyword: 'Base64 encoder',
+    angle:
+      'what Base64 is and is not (encoding, not encryption), the 64-char alphabet, padding rules, URL-safe variants, the 33% size overhead, and when to use data URIs vs real storage.',
+    primaryTool: '/tools/base64-encode-decode',
+    relatedLinks: ['/tools/url-encode-decode'],
+    sourceRefs: [
+      'https://www.rfc-editor.org/rfc/rfc4648',
+      'https://developer.mozilla.org/en-US/docs/Glossary/Base64',
+    ],
+    tags: ['base64', 'encoding'],
   },
   {
-    topic: 'UUID v4 vs v7: which one should you actually use in 2026',
-    angle: 'v4 vs v7 tradeoffs, database index impact, when ULIDs make sense, Postgres vs MySQL behavior.',
-    linkTool: '/tools/uuid-generator',
+    topic: 'Unix timestamp to date: every conversion you’ll ever need',
+    primaryKeyword: 'Unix timestamp converter',
+    angle:
+      'seconds vs milliseconds, UTC vs local, ISO 8601, timezone offsets, and the classic copy-paste mistakes that ship bugs to production.',
+    primaryTool: '/tools/timestamp-converter',
+    relatedLinks: ['/tools/json-formatter'],
+    sourceRefs: [
+      'https://www.rfc-editor.org/rfc/rfc3339',
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date',
+    ],
+    tags: ['timestamps', 'dates', 'utc'],
+  },
+  {
+    topic: 'UUID v4 vs UUID v7: which one should you use in 2026',
+    primaryKeyword: 'UUID generator',
+    angle:
+      'random v4 vs time-ordered v7, B-tree index behavior in Postgres and MySQL, why ULIDs exist, and concrete recommendations per use case.',
+    primaryTool: '/tools/uuid-generator',
+    relatedLinks: ['/tools/json-formatter'],
+    sourceRefs: [
+      'https://datatracker.ietf.org/doc/html/rfc9562',
+      'https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID',
+    ],
     tags: ['uuid', 'database', 'ids'],
   },
   {
-    topic: 'JSON formatting edge cases that bite you in production',
-    angle: 'NaN and Infinity, BigInt, trailing commas, JSON5, streaming parsers, common serializer footguns.',
-    linkTool: '/tools/json-formatter',
-    tags: ['json', 'debugging'],
+    topic: 'URL encoding: the rules every API consumer gets wrong',
+    primaryKeyword: 'URL encoder',
+    angle:
+      'encodeURI vs encodeURIComponent, what counts as a reserved character, percent-encoded + and %20, double-encoding disasters, and when the server is actually at fault.',
+    primaryTool: '/tools/url-encode-decode',
+    relatedLinks: ['/tools/base64-encode-decode', '/tools/html-escape-unescape'],
+    sourceRefs: [
+      'https://url.spec.whatwg.org/',
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent',
+    ],
+    tags: ['urls', 'api', 'http'],
   },
   {
-    topic: 'Why your CSV import is broken (and how to actually fix it)',
-    angle: 'commas in fields, quote escaping, BOM bytes, CRLF vs LF, Excel vs Google Sheets behavior.',
-    linkTool: '/tools/json-to-csv',
-    tags: ['csv', 'data', 'excel'],
+    topic: 'JSON to CSV: the conversion pitfalls that eat your weekend',
+    primaryKeyword: 'JSON to CSV converter',
+    angle:
+      'nested objects, arrays of arrays, commas inside fields, quoting and escaping rules, BOM and CRLF, Excel vs Sheets behavior, stable column ordering.',
+    primaryTool: '/tools/json-to-csv',
+    relatedLinks: ['/tools/json-formatter', '/tools/json-minifier'],
+    sourceRefs: [
+      'https://www.rfc-editor.org/rfc/rfc4180',
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON',
+    ],
+    tags: ['json', 'csv', 'data'],
+  },
+  {
+    topic: 'HTML escape and unescape: stopping XSS in modern web apps',
+    primaryKeyword: 'HTML escape tool',
+    angle:
+      'what each HTML entity escapes, why context matters (attribute vs text vs URL vs script), CSP as a second layer, and the libraries to trust.',
+    primaryTool: '/tools/html-escape-unescape',
+    relatedLinks: ['/tools/url-encode-decode'],
+    sourceRefs: [
+      'https://owasp.org/www-community/attacks/xss/',
+      'https://developer.mozilla.org/en-US/docs/Glossary/Cross-site_scripting',
+    ],
+    tags: ['xss', 'security', 'html'],
+  },
+  {
+    topic: 'Regex patterns every backend engineer ends up writing',
+    primaryKeyword: 'regex patterns developer',
+    angle:
+      'canonical patterns for email, UUID, slug, phone, URL, and when to stop and reach for a real parser instead.',
+    primaryTool: '/tools/json-formatter',
+    relatedLinks: ['/tools/uuid-generator'],
+    sourceRefs: [
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions',
+    ],
+    tags: ['regex', 'backend', 'validation'],
   },
   {
     topic: 'Password generation: the honest guide for developers',
-    angle: 'entropy vs length, diceware vs random, manager vs manual, server-side generation pitfalls.',
-    linkTool: '/tools/password-generator',
+    primaryKeyword: 'password generator',
+    angle:
+      'entropy vs length, diceware vs random, why managers beat memorization, and the server-side generation pitfalls that cause breaches.',
+    primaryTool: '/tools/password-generator',
+    relatedLinks: ['/tools/base64-encode-decode'],
+    sourceRefs: [
+      'https://pages.nist.gov/800-63-3/',
+      'https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues',
+    ],
     tags: ['security', 'passwords'],
   },
   {
-    topic: 'camelCase, snake_case, kebab-case: a practical style decision tree',
-    angle: 'language conventions, API boundaries, URL slugs, CSS, database columns — when each wins.',
-    linkTool: '/tools/case-converter',
+    topic: 'camelCase, snake_case, kebab-case: a decision tree that actually works',
+    primaryKeyword: 'case converter',
+    angle:
+      'language conventions, API boundaries, URL slugs, CSS, database columns — when each style wins, and why mixing them causes bugs.',
+    primaryTool: '/tools/case-converter',
+    relatedLinks: ['/tools/word-counter'],
+    sourceRefs: [
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types',
+    ],
     tags: ['conventions', 'style'],
   },
   {
-    topic: 'HTML escaping: what actually stops XSS in 2026',
-    angle: 'context-aware escaping, CSP, the pitfalls of regex-based sanitization, modern libraries that do it right.',
-    linkTool: '/tools/html-escape-unescape',
-    tags: ['security', 'xss', 'html'],
-  },
-  {
-    topic: 'Binary, octal, hex: when base conversion actually matters',
-    angle: 'bitmasks, file permissions, color codes, debugging with hex dumps, hex literals across languages.',
-    linkTool: '/tools/number-base-converter',
+    topic: 'Hex, binary, and octal: when base conversion matters in real code',
+    primaryKeyword: 'number base converter',
+    angle:
+      'bitmasks, Unix file permissions, color codes, reading hex dumps, and hex literal syntax across languages.',
+    primaryTool: '/tools/number-base-converter',
+    relatedLinks: ['/tools/base64-encode-decode'],
+    sourceRefs: [
+      'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString',
+    ],
     tags: ['binary', 'hex', 'low-level'],
   },
   {
-    topic: 'Sorting lines: the underrated move in every developer workflow',
-    angle: 'diffs, logs, import ordering, env files, quick dedupe — why a sort+uniq pipeline solves half your problems.',
-    linkTool: '/tools/line-sorter',
+    topic: 'Sorting and deduping lines: the underrated developer shortcut',
+    primaryKeyword: 'sort lines online',
+    angle:
+      'log triage, import ordering, diff noise, env files, and why `sort | uniq` solves half the problems that look complicated.',
+    primaryTool: '/tools/line-sorter',
+    relatedLinks: ['/tools/word-counter'],
+    sourceRefs: [
+      'https://man7.org/linux/man-pages/man1/sort.1.html',
+    ],
     tags: ['cli', 'workflow'],
   },
   {
-    topic: 'Writing SQL IN clauses from lists: stop doing it by hand',
-    angle: 'common mistakes, quoting strings vs numbers, limits across databases, alternatives like temp tables.',
-    linkTool: '/tools/text-to-sql',
+    topic: 'SQL IN clauses from lists: stop doing it by hand',
+    primaryKeyword: 'SQL IN clause',
+    angle:
+      'common mistakes, string vs number quoting, parameter limits across databases, and alternatives like temp tables and VALUES.',
+    primaryTool: '/tools/text-to-sql',
+    relatedLinks: ['/tools/line-sorter'],
+    sourceRefs: [
+      'https://www.postgresql.org/docs/current/functions-comparisons.html',
+    ],
     tags: ['sql', 'databases'],
   },
   {
-    topic: 'JSON minification: when it matters and when it does not',
-    angle: 'payload size vs readability, gzip/brotli effects, API responses vs bundled assets, debugging pain.',
-    linkTool: '/tools/json-minifier',
+    topic: 'JSON minification: when it matters and when it doesn’t',
+    primaryKeyword: 'JSON minifier',
+    angle:
+      'payload size vs readability, gzip and brotli effects, API responses vs bundled assets, and why minification rarely moves the needle by itself.',
+    primaryTool: '/tools/json-minifier',
+    relatedLinks: ['/tools/json-formatter'],
+    sourceRefs: [
+      'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding',
+    ],
     tags: ['json', 'performance'],
-  },
-  {
-    topic: 'Word counts in technical writing: SEO, social, and beyond',
-    angle: 'optimal lengths for blog posts, tweets, metadata, LinkedIn, reading time heuristics, character vs word counts.',
-    linkTool: '/tools/word-counter',
-    tags: ['writing', 'seo'],
   },
 ];
 
 function slugify(str) {
   return str
     .toLowerCase()
+    .replace(/[’']/g, '')
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
@@ -125,7 +243,6 @@ function todayIso() {
 }
 
 function pickTopic() {
-  // Skip topics whose slug already exists in the blog dir to avoid duplicates.
   const existing = new Set(
     fs
       .readdirSync(BLOG_DIR)
@@ -145,9 +262,9 @@ async function callGemini(prompt) {
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.85,
+        temperature: 0.8,
         topP: 0.95,
-        maxOutputTokens: 2400,
+        maxOutputTokens: 6000,
       },
     }),
   });
@@ -157,27 +274,72 @@ async function callGemini(prompt) {
   }
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('No text returned: ' + JSON.stringify(data).slice(0, 500));
+  if (!text)
+    throw new Error('No text returned: ' + JSON.stringify(data).slice(0, 500));
   return text;
 }
 
-function buildPrompt({ topic, angle, linkTool }) {
-  return `You are a senior software engineer writing a short, high-quality blog post for a developer tools website (https://converterhub.dev).
+function buildPrompt(topicDef) {
+  const {
+    topic,
+    primaryKeyword,
+    angle,
+    primaryTool,
+    relatedLinks,
+    sourceRefs,
+  } = topicDef;
+  const internalLinkList = [primaryTool, ...(relatedLinks ?? [])]
+    .map((l) => `- https://converterhub.dev${l}`)
+    .join('\n');
+  const externalLinkList = (sourceRefs ?? []).map((l) => `- ${l}`).join('\n');
 
-Topic: ${topic}
-Angle: ${angle}
+  return `You are a senior software engineer and tech writer producing a long-form, SEO-optimized blog post for ConverterHub (https://converterhub.dev), a free developer tools site. The audience is working developers who ship code.
 
-Write a practical, no-fluff blog post of about 700–900 words. Follow these rules strictly:
+TOPIC: ${topic}
+PRIMARY KEYWORD: ${primaryKeyword}
+ANGLE: ${angle}
 
-1. Voice: plain, direct, first-person when natural. Sound like an experienced engineer writing in a terminal at 11pm, not a marketing blog. No "In today's fast-paced world" or "Let's dive in" openings. No emojis. No exclamation marks except in rare, earned moments.
-2. Structure: an opening paragraph that hooks with a concrete example, then 3–5 short sections with ## headings, then a short TL;DR at the end.
-3. Use real code snippets in \`\`\`lang fences where helpful. Keep them short and correct.
-4. Include exactly ONE internal link to our free tool at "${linkTool}" using markdown. Use natural anchor text (e.g., "paste it into our [tool name](${linkTool})"). Do NOT link to external tools or competing sites.
-5. Do not invent statistics. Do not hedge with "it is important to note". No bullet lists of more than 6 items.
-6. Do not include any frontmatter — I will add it. Do not include a top-level # heading — the title will be added separately. Start with the opening paragraph of the post.
-7. End with a short "## TL;DR" section of 2–4 sentences.
+INTERNAL LINKS (weave naturally — include the primary tool link once, others where they fit):
+${internalLinkList}
 
-Output ONLY the markdown body (starting with the opening paragraph). No preamble, no commentary, no code fences around the whole output.`;
+AUTHORITATIVE EXTERNAL SOURCES (cite at least one as a markdown link in the body):
+${externalLinkList}
+
+WRITING RULES — follow all of them:
+
+1. Voice: plain, direct, example-driven. Sound like an experienced engineer, not a marketing blog. No "In today's fast-paced world", no "dive in", no "unlock", no "game-changer", no emojis, no exclamation marks. First person ("I", "we") is fine where natural.
+2. Length: 1500 to 2200 words of body content. Aim for the upper end.
+3. Structure — in this exact order:
+   a. Opening paragraph (3–5 sentences). Start with a concrete problem or example, not a definition. DO NOT include a top-level "#" title — the site adds it.
+   b. A short "## TL;DR" with 3–5 bullets summarizing the whole post.
+   c. 4 to 6 body sections, each with a "## " heading. Use the PRIMARY KEYWORD in at least 2 of those H2s in natural form (not shoe-horned). Include code examples in \`\`\`language fences where they earn their space. Use "### " subheadings inside sections when useful.
+   d. A "## Common mistakes" section with a bulleted list of 4–6 concrete mistakes and how to avoid them.
+   e. A "## FAQ" section (this exact heading, singular). Under it, 4–6 "### " subheadings, each a full natural-language question (e.g. "### Is Base64 encryption?"). Under each question, 1–3 sentences of answer. These will be picked up by our FAQPage schema, so keep them self-contained and informative.
+   f. A brief "## Wrapping up" closing paragraph (NOT another TL;DR).
+4. Links:
+   a. Include the primary internal tool link EXACTLY ONCE with natural anchor text, e.g. "paste it into our [JSON formatter](${primaryTool})". Use the path, not the full URL.
+   b. Include 1–2 of the other internal links where they fit naturally, using the path.
+   c. Include AT LEAST ONE external citation link to one of the authoritative sources above, using the full URL.
+5. Do not invent statistics or benchmarks. Do not promise what the tool doesn't do. Do not mention competing tool sites by name. Do not add a generic disclaimer paragraph.
+6. Code blocks should be short, correct, and copy-pasteable. If you show wrong code, show the fix immediately after.
+7. Do NOT include any frontmatter, no top-level "#" heading, no wrapping code fences. Start with the opening paragraph. End with the final sentence of the "## Wrapping up" section — no sign-off.
+
+Output ONLY the markdown body. Nothing before the first paragraph. Nothing after the last paragraph.`;
+}
+
+function deriveDescription(body, topicDef) {
+  const firstPara =
+    body
+      .split('\n\n')
+      .map((p) => p.trim())
+      .find((p) => p.length > 40 && !p.startsWith('#') && !p.startsWith('-')) ??
+    topicDef.angle;
+  return firstPara
+    .replace(/\s+/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_`]/g, '')
+    .slice(0, 180)
+    .trim();
 }
 
 function writeFrontmatterPost(topicDef, body) {
@@ -192,18 +354,7 @@ function writeFrontmatterPost(topicDef, body) {
     return null;
   }
 
-  // Derive a one-line description from the first non-empty paragraph.
-  const firstPara = body
-    .split('\n\n')
-    .map((p) => p.trim())
-    .find((p) => p.length > 40 && !p.startsWith('#')) ?? topicDef.angle;
-  const description = firstPara
-    .replace(/\s+/g, ' ')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[*_`]/g, '')
-    .slice(0, 180)
-    .trim();
-
+  const description = deriveDescription(body, topicDef);
   const tags = topicDef.tags ?? [];
   const frontmatter = [
     '---',
