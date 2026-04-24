@@ -16,7 +16,7 @@ export async function generateMetadata({
   const post = getPostBySlug(slug);
   if (!post) return {};
   return {
-    title: `${post.title} | Copy-Paste Converter Hub`,
+    title: post.title,
     description: post.description,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
@@ -70,9 +70,24 @@ export default async function BlogPost({
     },
     publisher: {
       '@type': 'Organization',
-      name: 'Copy-Paste Converter Hub',
+      name: 'ConverterHub',
       url: 'https://converterhub.dev',
     },
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://converterhub.dev' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://converterhub.dev/blog' },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: post.title,
+        item: `https://converterhub.dev/blog/${post.slug}`,
+      },
+    ],
   };
 
   const related = getAllPosts()
@@ -85,138 +100,94 @@ export default async function BlogPost({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
-      {/* Header */}
-      <header className="container pt-12 md:pt-16 pb-10">
-        <nav className="mb-10 meta-label">
-          <Link href="/blog" className="link-grow">
-            ← Back to Dispatches
-          </Link>
-        </nav>
-        <div className="max-w-4xl rise rise-1">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="meta-label meta-label--accent">Dispatch</span>
-            <span className="h-px w-10 bg-accent" />
-            <time dateTime={post.date} className="meta-label">
-              {formatDate(post.date)}
-            </time>
-            <span className="meta-label">·</span>
-            <span className="meta-label">{post.readingMinutes} min read</span>
-          </div>
-          <h1 className="font-display text-5xl md:text-7xl leading-[0.95] tracking-tight-display text-ink font-normal">
+      <section className="border-b border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
+        <div className="container py-8 md:py-10">
+          <nav
+            aria-label="Breadcrumb"
+            className="text-xs text-[color:var(--text-muted)] mb-3"
+          >
+            <ol className="flex items-center gap-2 flex-wrap">
+              <li><Link href="/" className="hover:text-[color:var(--accent)]">Home</Link></li>
+              <li aria-hidden>/</li>
+              <li><Link href="/blog" className="hover:text-[color:var(--accent)]">Blog</Link></li>
+              <li aria-hidden>/</li>
+              <li className="text-[color:var(--text-soft)]" aria-current="page">
+                {post.title}
+              </li>
+            </ol>
+          </nav>
+          <h1 className="text-2xl md:text-4xl font-bold text-[color:var(--text)] leading-tight max-w-3xl">
             {post.title}
           </h1>
-          <p className="mt-6 max-w-2xl text-xl text-ink-soft leading-relaxed">
+          <p className="mt-3 text-base md:text-lg text-[color:var(--text-soft)] leading-relaxed max-w-3xl">
             {post.description}
           </p>
-          <div className="mt-8 flex items-center gap-6 flex-wrap">
+          <div className="mt-4 flex items-center gap-4 text-xs text-[color:var(--text-muted)] flex-wrap">
+            <time dateTime={post.date}>{formatDate(post.date)}</time>
+            <span>·</span>
+            <span>{post.readingMinutes} min read</span>
             {post.author && (
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-full bg-ink text-paper flex items-center justify-center font-display text-sm">
-                  {post.author
-                    .split(' ')
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join('')}
-                </span>
-                <div>
-                  <div className="meta-label meta-label--ink">
-                    {post.author}
-                  </div>
-                  <div className="font-mono text-[0.7rem] text-ink-muted">
-                    Author
-                  </div>
-                </div>
-              </div>
+              <>
+                <span>·</span>
+                <span>By {post.author}</span>
+              </>
             )}
             {post.tags && post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {post.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="font-mono text-[0.7rem] uppercase tracking-caps text-ink-muted border border-[color:var(--rule-soft)] px-2 py-1"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <>
+                <span>·</span>
+                <span>{post.tags.join(', ')}</span>
+              </>
             )}
           </div>
-        </div>
-        <div className="rule mt-12" />
-      </header>
-
-      {/* Body */}
-      <section className="container pb-16">
-        <div className="grid md:grid-cols-12 gap-10">
-          <aside className="md:col-span-3 order-2 md:order-1">
-            <div className="sticky top-32">
-              <div className="meta-label mb-2">In this issue</div>
-              <p className="font-display italic text-ink leading-snug">
-                {post.description}
-              </p>
-              <div className="rule-soft my-5" />
-              <div className="space-y-2 text-sm text-ink-soft">
-                <div className="flex justify-between">
-                  <span className="meta-label">Published</span>
-                  <span className="font-mono text-[0.7rem] text-ink">
-                    {formatDate(post.date)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="meta-label">Read time</span>
-                  <span className="font-mono text-[0.7rem] text-ink">
-                    {post.readingMinutes} min
-                  </span>
-                </div>
-              </div>
-            </div>
-          </aside>
-          <div
-            className="md:col-span-9 order-1 md:order-2 blog-content"
-            dangerouslySetInnerHTML={{ __html: post.html }}
-          />
         </div>
       </section>
 
-      {/* Related */}
+      <section className="container py-8 md:py-12">
+        <div
+          className="blog-content max-w-3xl"
+          dangerouslySetInnerHTML={{ __html: post.html }}
+        />
+      </section>
+
       {related.length > 0 && (
-        <section className="bg-[color:var(--paper-deep)] border-y border-ink">
-          <div className="container py-14">
-            <div className="flex items-baseline justify-between mb-8">
-              <div>
-                <div className="meta-label mb-1">§ Continue reading</div>
-                <h3 className="font-display text-3xl text-ink">
-                  More dispatches
-                </h3>
-              </div>
+        <section className="border-t border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
+          <div className="container py-10 md:py-14">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-semibold text-[color:var(--text)]">
+                More from the blog
+              </h2>
               <Link
                 href="/blog"
-                className="font-mono uppercase tracking-caps text-[0.72rem] text-ink link-grow"
+                className="text-sm text-[color:var(--accent)] hover:underline"
               >
-                All →
+                All posts →
               </Link>
             </div>
-            <ol className="divide-y divide-[color:var(--rule-soft)] border-y border-[color:var(--rule-soft)]">
-              {related.map((p, i) => (
+            <ul className="divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
+              {related.map((p) => (
                 <li key={p.slug}>
                   <Link
                     href={`/blog/${p.slug}`}
-                    className="group grid grid-cols-12 gap-4 items-baseline py-5 hover:bg-paper px-1"
+                    className="group grid grid-cols-12 gap-4 py-4 hover:bg-white px-2 -mx-2 rounded-md transition-colors"
                   >
-                    <span className="col-span-2 md:col-span-1 ordinal">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span className="col-span-10 md:col-span-9 font-display text-xl text-ink group-hover:text-accent transition-colors">
+                    <span className="col-span-12 md:col-span-9 font-medium text-[color:var(--text)] group-hover:text-[color:var(--accent)] transition-colors">
                       {p.title}
                     </span>
-                    <span className="col-span-12 md:col-span-2 meta-label text-right">
+                    <span className="col-span-6 md:col-span-2 text-xs text-[color:var(--text-muted)] self-center md:text-right">
+                      {formatDate(p.date)}
+                    </span>
+                    <span className="col-span-6 md:col-span-1 text-xs text-[color:var(--text-muted)] text-right self-center">
                       {p.readingMinutes} min
                     </span>
                   </Link>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
         </section>
       )}

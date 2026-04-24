@@ -1,21 +1,16 @@
 import React from 'react';
 
-/**
- * Typographic logotype.
- * Fraunces serif wordmark with a mono-caps kicker, rule mark on the left.
- */
 export const Logo = () => {
   return (
-    <div className="group flex items-baseline gap-3 select-none">
+    <div className="flex items-center gap-2 select-none">
       <span
         aria-hidden
-        className="hidden sm:inline-block w-6 h-px bg-ink translate-y-[-0.35rem] transition-all duration-300 group-hover:w-10 group-hover:bg-accent"
-      />
-      <span className="font-display text-2xl md:text-[1.7rem] font-medium tracking-tight-display text-ink leading-none">
-        Converter<span className="text-accent">·</span>Hub
+        className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-[color:var(--accent)] text-white font-bold text-sm"
+      >
+        ⇄
       </span>
-      <span className="hidden md:inline-block font-mono uppercase tracking-caps text-[0.58rem] text-ink-muted translate-y-[-0.1rem]">
-        a field manual
+      <span className="font-semibold text-[1.05rem] text-[color:var(--text)] tracking-tight">
+        ConverterHub
       </span>
     </div>
   );

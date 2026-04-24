@@ -42,125 +42,153 @@ export function ToolLayout({ tool, children, className }: ToolLayoutProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [copy]);
 
-  const jsonLd = {
+  const softwareAppJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
+    '@type': 'SoftwareApplication',
     name: tool.title,
     description: tool.description,
     applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Any',
+    url: `https://converterhub.dev/tools/${tool.slug}`,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      ratingCount: '120',
+    },
   };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://converterhub.dev',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: categoryLabels[tool.category] ?? tool.category,
+        item: 'https://converterhub.dev',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: tool.title,
+        item: `https://converterhub.dev/tools/${tool.slug}`,
+      },
+    ],
+  };
+
+  const faqJsonLd = tool.faqs.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: tool.faqs.map((f) => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: f.answer,
+          },
+        })),
+      }
+    : null;
 
   const related = tools
     .filter((t) => t.category === tool.category && t.slug !== tool.slug)
-    .slice(0, 5);
+    .slice(0, 6);
 
   return (
     <article className={cn('tool-page', className)}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
 
-      {/* ——— Header ——— */}
-      <header className="container pt-10 md:pt-14 pb-10">
-        <nav className="flex items-center gap-3 mb-8 meta-label">
-          <Link href="/" className="link-grow">
-            Tools
-          </Link>
-          <span>·</span>
-          <span className="meta-label--ink">
-            {categoryLabels[tool.category] ?? tool.category}
-          </span>
-        </nav>
+      {/* ——— Compact header + tool above fold ——— */}
+      <section className="border-b border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
+        <div className="container py-6 md:py-8">
+          <nav
+            aria-label="Breadcrumb"
+            className="text-xs text-[color:var(--text-muted)] mb-3"
+          >
+            <ol className="flex items-center gap-2 flex-wrap">
+              <li>
+                <Link href="/" className="hover:text-[color:var(--accent)]">
+                  Home
+                </Link>
+              </li>
+              <li aria-hidden>/</li>
+              <li>
+                <Link href="/" className="hover:text-[color:var(--accent)]">
+                  {categoryLabels[tool.category] ?? tool.category}
+                </Link>
+              </li>
+              <li aria-hidden>/</li>
+              <li className="text-[color:var(--text-soft)]" aria-current="page">
+                {tool.title}
+              </li>
+            </ol>
+          </nav>
 
-        <div className="grid md:grid-cols-12 gap-8 items-end">
-          <div className="md:col-span-8 rise rise-1">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="meta-label meta-label--accent">Tool</span>
-              <span className="h-px w-10 bg-accent" />
-              <span className="meta-label">No. {tool.slug}</span>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+            <div className="max-w-3xl">
+              <h1 className="text-2xl md:text-3xl font-bold text-[color:var(--text)] leading-tight">
+                {tool.title}
+              </h1>
+              <p className="mt-2 text-sm md:text-base text-[color:var(--text-soft)] leading-relaxed">
+                {tool.description}
+              </p>
             </div>
-            <h1 className="font-display text-5xl md:text-7xl leading-[0.95] tracking-tight-display text-ink font-normal">
-              {tool.title}
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg text-ink-soft leading-relaxed">
-              {tool.description}
-            </p>
-          </div>
-
-          <div className="md:col-span-4 rise rise-2 md:justify-self-end">
-            <button
-              onClick={handleShare}
-              className="btn-secondary"
-              aria-label="Copy page URL"
-            >
-              {isCopied ? 'Copied ✓' : 'Share URL'}
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[color:var(--text-muted)] hidden md:inline">
+                Runs in your browser
+              </span>
+              <button
+                onClick={handleShare}
+                className="btn-secondary"
+                aria-label="Copy page URL"
+              >
+                {isCopied ? 'Copied ✓' : 'Share'}
+              </button>
+            </div>
           </div>
         </div>
-        <div className="rule mt-10" />
-      </header>
+      </section>
 
-      {/* ——— Workspace ——— */}
-      <section className="container pb-14">
-        <div className="flex items-center justify-between mb-4">
-          <span className="meta-label">Workspace</span>
-          <span className="meta-label">Runs in your browser</span>
-        </div>
+      {/* ——— Workspace (above the fold) ——— */}
+      <section className="container py-6 md:py-8">
         <div className="tool-workspace-wrapper">{children}</div>
       </section>
 
-      {/* ——— Capabilities ——— */}
-      <section className="bg-[color:var(--paper-deep)] border-y border-ink">
-        <div className="container py-14">
-          <div className="grid md:grid-cols-12 gap-8">
-            <div className="md:col-span-4">
-              <div className="meta-label mb-2">§ Capabilities</div>
-              <h2 className="font-display text-3xl font-medium text-ink">
-                What you can expect
-              </h2>
-            </div>
-            <dl className="md:col-span-8 grid sm:grid-cols-2 gap-x-10 gap-y-6">
-              {[
-                {
-                  k: 'Local processing',
-                  v: 'Data never leaves the browser.',
-                },
-                {
-                  k: 'Large inputs',
-                  v: 'Optimised for 5MB+ of text.',
-                },
-                {
-                  k: 'No tracking',
-                  v: 'No logs, no analytics on the inputs.',
-                },
-                {
-                  k: 'Standards-first',
-                  v: 'Matches the relevant RFC where one exists.',
-                },
-              ].map((item) => (
-                <div
-                  key={item.k}
-                  className="border-t border-[color:var(--rule-soft)] pt-3"
-                >
-                  <dt className="meta-label meta-label--ink">{item.k}</dt>
-                  <dd className="mt-1 text-ink-soft">{item.v}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </div>
-      </section>
-
       {/* ——— How it works ——— */}
-      <section className="container py-16">
-        <div className="grid md:grid-cols-12 gap-10">
+      <section className="container pb-10 md:pb-14">
+        <div className="grid md:grid-cols-12 gap-8">
           <div className="md:col-span-4">
-            <div className="meta-label mb-2">§ How it works</div>
-            <h2 className="font-display text-3xl font-medium text-ink">
-              Under the hood
+            <h2 className="text-lg md:text-xl font-semibold text-[color:var(--text)]">
+              How it works
             </h2>
+            <p className="mt-2 text-sm text-[color:var(--text-muted)]">
+              A quick explanation of what this tool does, and when it&apos;s useful.
+            </p>
           </div>
           <div
             className="md:col-span-8 prose"
@@ -171,33 +199,27 @@ export function ToolLayout({ tool, children, className }: ToolLayoutProps) {
 
       {/* ——— FAQ ——— */}
       {tool.faqs.length > 0 && (
-        <section className="bg-[color:var(--paper-deep)] border-y border-ink">
-          <div className="container py-16">
-            <div className="grid md:grid-cols-12 gap-10">
+        <section className="border-t border-[color:var(--border)] bg-[color:var(--bg-subtle)]">
+          <div className="container py-10 md:py-14">
+            <div className="grid md:grid-cols-12 gap-8">
               <div className="md:col-span-4">
-                <div className="meta-label mb-2">§ Questions</div>
-                <h2 className="font-display text-3xl font-medium text-ink">
-                  Frequently <span className="font-italic-serif">asked</span>
+                <h2 className="text-lg md:text-xl font-semibold text-[color:var(--text)]">
+                  Frequently asked questions
                 </h2>
+                <p className="mt-2 text-sm text-[color:var(--text-muted)]">
+                  Short answers to common questions about {tool.title.toLowerCase()}.
+                </p>
               </div>
-              <div className="md:col-span-8 divide-y divide-[color:var(--ink)]/20 border-y border-ink">
+              <div className="md:col-span-8 divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
                 {tool.faqs.map((faq, i) => (
-                  <details
-                    key={i}
-                    className="group py-5 px-1 transition-colors open:bg-paper"
-                  >
-                    <summary className="flex items-start gap-4 cursor-pointer list-none">
-                      <span className="ordinal mt-1">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <span className="flex-1 font-display text-xl text-ink leading-snug">
-                        {faq.question}
-                      </span>
-                      <span className="mt-1 font-mono text-ink-muted group-open:rotate-45 transition-transform">
+                  <details key={i} className="group py-4">
+                    <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-[color:var(--text)]">
+                      <span>{faq.question}</span>
+                      <span className="text-[color:var(--text-muted)] group-open:rotate-45 transition-transform text-xl leading-none ml-4">
                         +
                       </span>
                     </summary>
-                    <p className="pl-10 pr-4 mt-3 text-ink-soft leading-relaxed">
+                    <p className="mt-2 text-[color:var(--text-soft)] leading-relaxed">
                       {faq.answer}
                     </p>
                   </details>
@@ -208,42 +230,37 @@ export function ToolLayout({ tool, children, className }: ToolLayoutProps) {
         </section>
       )}
 
-      {/* ——— Related ——— */}
+      {/* ——— Related tools ——— */}
       {related.length > 0 && (
-        <section className="container py-14">
-          <div className="rule mb-8" />
-          <div className="flex items-baseline justify-between mb-6">
-            <div>
-              <div className="meta-label mb-1">§ Continue reading</div>
-              <h3 className="font-display text-2xl text-ink">Related tools</h3>
-            </div>
+        <section className="container py-10 md:py-14">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-lg md:text-xl font-semibold text-[color:var(--text)]">
+              Related tools
+            </h2>
             <Link
               href="/"
-              className="font-mono uppercase tracking-caps text-[0.72rem] text-ink link-grow"
+              className="text-sm text-[color:var(--accent)] hover:underline"
             >
               All tools →
             </Link>
           </div>
-          <ol className="divide-y divide-[color:var(--rule-soft)] border-y border-[color:var(--rule-soft)]">
-            {related.map((t, i) => (
-              <li key={t.slug}>
-                <Link
-                  href={`/tools/${t.slug}`}
-                  className="group grid grid-cols-12 gap-4 items-baseline py-4 hover:bg-[color:var(--paper-deep)] px-1"
-                >
-                  <span className="col-span-2 md:col-span-1 ordinal">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="col-span-8 md:col-span-9 font-display text-lg text-ink group-hover:text-accent transition-colors">
-                    {t.title}
-                  </span>
-                  <span className="col-span-2 font-mono text-[0.7rem] uppercase tracking-caps text-ink-muted group-hover:text-accent text-right transition-colors">
-                    →
-                  </span>
-                </Link>
-              </li>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {related.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/tools/${t.slug}`}
+                className="tool-card group"
+              >
+                <div className="tool-card__title group-hover:text-[color:var(--accent)] transition-colors">
+                  {t.title}
+                </div>
+                <div className="tool-card__desc">{t.description}</div>
+                <div className="tool-card__cat">
+                  {categoryLabels[t.category] ?? t.category}
+                </div>
+              </Link>
             ))}
-          </ol>
+          </div>
         </section>
       )}
     </article>

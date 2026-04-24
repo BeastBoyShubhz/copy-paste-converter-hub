@@ -9,34 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["var(--font-display)", "Georgia", "serif"],
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        sans: ["var(--font-sans-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono-jb)", "ui-monospace", "monospace"],
       },
       colors: {
-        paper: {
-          DEFAULT: "var(--paper)",
-          deep: "var(--paper-deep)",
-          card: "var(--paper-card)",
-        },
-        ink: {
-          DEFAULT: "var(--ink)",
-          soft: "var(--ink-soft)",
-          muted: "var(--ink-muted)",
-        },
         accent: {
           DEFAULT: "var(--accent)",
-          deep: "var(--accent-deep)",
-          tint: "var(--accent-tint)",
+          hover: "var(--accent-hover)",
+          soft: "var(--accent-soft)",
         },
-        rule: {
-          DEFAULT: "var(--rule)",
-          soft: "var(--rule-soft)",
-        },
-      },
-      letterSpacing: {
-        "caps": "0.18em",
-        "tight-display": "-0.02em",
       },
     },
   },
